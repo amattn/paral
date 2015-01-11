@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"sync"
 	"time"
 )
 
@@ -36,7 +35,8 @@ func main() {
 	fmt.Printf("> Go Version: %v %v/%v\n", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 	fmt.Printf("> NumCPU(): %v\n", runtime.NumCPU())
 	fmt.Printf("> GOMAXPROCS(): %v\n", runtime.GOMAXPROCS(0))
-	fmt.Println(">", time.Now())
+	start := time.Now()
+	fmt.Println(">", start)
 
 	// command line flags:
 	flag.Parse()
@@ -59,9 +59,9 @@ func main() {
 
 	fmt.Println("Commands:")
 	args := flag.Args()
-	cmds := make([]*command, 0, len(args))
+	cmds := make([]*commandWrapper, 0, len(args))
 	for i, a := range flag.Args() {
-		cmd := command{
+		cmd := commandWrapper{
 			raw: a,
 			num: i,
 		}
@@ -71,55 +71,32 @@ func main() {
 
 	// Scheduler
 
-	s := MakeScheduler(max_simul)
+	s := NewScheduler(max_simul)
+	s.AddCommands(cmds...)
 	s.Start()
-
-	for _, cmd := range cmds {
-		s.intake <- cmd
-	}
-	s.Close()
-
 	s.Wait()
-	log.Println("Finished", s)
-}
+	// log.Println("TRACE Finished", s)
 
-type Scheduler struct {
-	maxSimul int
-	intake   chan *command
+	// Log some output
 
-	inFlight int
-
-	sync.WaitGroup
-}
-
-func MakeScheduler(maxSimul int) Scheduler {
-	return Scheduler{
-		maxSimul: maxSimul,
-		intake:   make(chan *command),
+	// calculate how much time would theoretically have been spent if we did things in serial:
+	var total_process_time time.Duration
+	for _, cmd := range s.finished {
+		total_process_time += cmd.end.Sub(cmd.start)
 	}
-}
+	log.Println("Sum of all process time:", total_process_time)
 
-func (s *Scheduler) Start() {
-	go func() {
-		s.Add(1)
-		defer s.Done()
+	// total time taken:
+	total_duration := time.Now().Sub(start)
+	log.Println("     Total time elapsed:", total_duration)
 
-		for cmd := range s.intake {
-			log.Println(s.inFlight, s.maxSimul)
-			for s.inFlight >= s.maxSimul {
-				time.Sleep(10 * time.Millisecond)
-			}
-			s.Add(1)
-			s.inFlight++
-			go func(cmd *command) {
-				cmd.run()
-				s.inFlight--
-				s.Done()
-			}(cmd)
-		}
-	}()
-}
-
-func (s *Scheduler) Close() {
-	close(s.intake)
+	// show some gain/loss
+	ratio := float64(total_process_time) / float64(time.Now().Sub(start))
+	if ratio >= 1 {
+		log.Printf("        effeciency gain: %0.2f", ratio)
+	} else if ratio == 1 {
+		log.Printf("             effeciency: %0.2f", ratio)
+	} else {
+		log.Printf("        effeciency loss: %0.2f", (ratio))
+	}
 }
