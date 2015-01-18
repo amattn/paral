@@ -29,6 +29,9 @@ func (wrapper commandWrapper) outputFileName() string {
 }
 
 func (wrapper commandWrapper) duration() time.Duration {
+	if wrapper.end.IsZero() {
+		return time.Now().Sub(wrapper.start)
+	}
 	return wrapper.end.Sub(wrapper.start)
 }
 

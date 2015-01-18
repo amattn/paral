@@ -93,10 +93,10 @@ func main() {
 	// show some gain/loss
 	ratio := float64(total_process_time) / float64(time.Now().Sub(start))
 	if ratio >= 1 {
-		log.Printf("        effeciency gain: %0.2f", ratio)
+		log.Printf("      effeciency ratio (gain): %0.2f", ratio)
 	} else if ratio == 1 {
-		log.Printf("             effeciency: %0.2f", ratio)
+		log.Printf("             effeciency ratio: %0.2f", ratio)
 	} else {
-		log.Printf("        effeciency loss: %0.2f", (ratio))
+		log.Printf("        effeciency ratio: %0.2f", (ratio))
 	}
 }

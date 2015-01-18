@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
+	"sort"
 	"sync"
 	"text/tabwriter"
 	"time"
@@ -15,17 +17,19 @@ type Scheduler struct {
 
 	numberSubmitted int
 	todo            []*commandWrapper
-	inProgress      map[int]*commandWrapper // key is commandWrapper.num
+	inFlight        map[int]*commandWrapper // key is commandWrapper.num
 	finished        []*commandWrapper
 
 	sync.WaitGroup
 
-	ticker *time.Ticker
+	ticker    *time.Ticker
+	outputter *ErasableOutputter
 }
 
 func NewScheduler(maxSimul int) *Scheduler {
 	return &Scheduler{
-		maxSimul: maxSimul,
+		maxSimul:  maxSimul,
+		outputter: NewErasableOutputter(os.Stdout),
 	}
 }
 
@@ -34,8 +38,8 @@ func (s *Scheduler) AddCommands(cmds ...*commandWrapper) {
 	s.todo = append(s.todo, cmds...)
 }
 
-func (s *Scheduler) inFlight() int {
-	return len(s.inProgress)
+func (s *Scheduler) numInFlight() int {
+	return len(s.inFlight)
 }
 
 func (s *Scheduler) Start() {
@@ -46,8 +50,8 @@ func (s *Scheduler) Start() {
 	go func() {
 		s.ticker = time.NewTicker(200 * time.Millisecond)
 
-		for now := range s.ticker.C {
-			OutputProgess(now, s)
+		for _ = range s.ticker.C {
+			s.outputter.OutputErasableString(s.Progress())
 		}
 	}()
 }
@@ -60,20 +64,20 @@ func (s *Scheduler) start() {
 		log.Println("Trace no commands to process")
 		return
 	}
-	s.inProgress = make(map[int]*commandWrapper)
+	s.inFlight = make(map[int]*commandWrapper)
 	s.finished = make([]*commandWrapper, 0, len(s.todo))
 
 	for len(s.todo) > 0 {
 		// log.Println("Trace start() outer for loop")
 
 		// are we at max inflight capacity?  just wait
-		if s.inFlight() >= s.maxSimul {
+		if s.numInFlight() >= s.maxSimul {
 			time.Sleep(1 * time.Millisecond)
 		} else {
 			nextWrapper := s.todo[0]
 			s.todo = s.todo[1:]
 			s.Add(1)
-			s.inProgress[nextWrapper.num] = nextWrapper
+			s.inFlight[nextWrapper.num] = nextWrapper
 
 			go func(wrapper *commandWrapper) {
 				wrapper.run()
@@ -83,8 +87,11 @@ func (s *Scheduler) start() {
 				if wrapper.pstate != nil {
 					exit = wrapper.pstate.String()
 				}
-				OutputString(s, fmt.Sprintf("Command %d finished, %v, time elapsed: %v\n", wrapper.num, exit, wrapper.duration()))
-				delete(s.inProgress, wrapper.num)
+				finished_str := fmt.Sprintf("Command %d finished, %v, time elapsed: %v\n", wrapper.num, exit, wrapper.duration())
+				s.outputter.EraseLastEraseble()
+				s.outputter.OutputUnerasableString(finished_str)
+				s.outputter.OutputErasableString(s.Progress())
+				delete(s.inFlight, wrapper.num)
 				s.Done()
 			}(nextWrapper)
 		}
@@ -94,23 +101,43 @@ func (s *Scheduler) start() {
 func (s *Scheduler) Wait() {
 	s.WaitGroup.Wait()
 	s.ticker.Stop()
-	OutputProgess(time.Now(), s)
+	s.outputter.OutputErasableString(s.Progress())
 }
 
-func (s *Scheduler) Progress(t time.Time) string {
+func (s *Scheduler) Progress() string {
 
 	w := new(tabwriter.Writer)
 	buf := new(bytes.Buffer)
 	w.Init(buf, 5, 0, 1, ' ', tabwriter.AlignRight)
 	fmt.Fprintf(w, "\tnot yet started\tin progress\tfinished\tsubmitted\t\n")
-	fmt.Fprintf(w, "count:\t%d\t%d\t%d\t%d\t\n", len(s.todo), len(s.inProgress), len(s.finished), s.numberSubmitted)
+	fmt.Fprintf(w, "count:\t%d\t%d\t%d\t%d\t\n", len(s.todo), len(s.inFlight), len(s.finished), s.numberSubmitted)
 	submitted := float32(s.numberSubmitted)
 	fmt.Fprintf(w,
 		"percent:\t%3.1f\t %3.1f\t   %3.1f\t\t\n",
 		100*float32(len(s.todo))/submitted,
-		100*float32(len(s.inProgress))/submitted,
+		100*float32(len(s.inFlight))/submitted,
 		100*float32(len(s.finished))/submitted,
 	)
+
+	keys := make([]int, 0, len(s.inFlight))
+	for num, _ := range s.inFlight {
+		keys = append(keys, num)
+	}
+
+	sort.Ints(keys)
+
+	for _, num := range keys {
+		cmd := s.inFlight[num]
+		if cmd != nil {
+
+			raw := cmd.raw
+			if len(raw) > 10 {
+				raw = raw[0:9]
+			}
+			fmt.Fprintf(w, "format %d %+v time elapsed:%v output bytes:%d\n", num, raw, cmd.duration(), cmd.cbout.totalOut)
+		}
+	}
+
 	w.Flush()
 	b, err := ioutil.ReadAll(buf)
 	if err != nil {
