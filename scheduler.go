@@ -48,7 +48,7 @@ func (s *Scheduler) Start() {
 	go s.start()
 
 	go func() {
-		s.ticker = time.NewTicker(200 * time.Millisecond)
+		s.ticker = time.NewTicker(500 * time.Millisecond)
 
 		for _ = range s.ticker.C {
 			s.outputter.OutputErasableString(s.Progress())
@@ -87,7 +87,7 @@ func (s *Scheduler) start() {
 				if wrapper.pstate != nil {
 					exit = wrapper.pstate.String()
 				}
-				finished_str := fmt.Sprintf("Command %d finished, %v, time elapsed: %v\n", wrapper.num, exit, wrapper.duration())
+				finished_str := fmt.Sprintf("Command %d finished, %v, time elapsed:%v stdout bytes:%d stderr bytes:%d\n", wrapper.num, exit, wrapper.duration(), wrapper.cbout.TotalIn(), wrapper.cberr.TotalIn())
 				s.outputter.EraseLastEraseble()
 				s.outputter.OutputUnerasableString(finished_str)
 				s.outputter.OutputErasableString(s.Progress())
@@ -134,7 +134,7 @@ func (s *Scheduler) Progress() string {
 			if len(raw) > 10 {
 				raw = raw[0:9]
 			}
-			fmt.Fprintf(w, "format %d %+v time elapsed:%v output bytes:%d\n", num, raw, cmd.duration(), cmd.cbout.totalOut)
+			fmt.Fprintf(w, "format %d %+v time elapsed:%v stdout bytes:%d stderr bytes:%d\n", num, raw, cmd.duration(), cmd.cbout.TotalIn(), cmd.cberr.TotalIn())
 		}
 	}
 

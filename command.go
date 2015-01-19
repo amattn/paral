@@ -46,6 +46,8 @@ func (wrapper *commandWrapper) run() (err error) {
 	wrapper.cbout = NewCountingBuffer()
 	cmd.Stderr = wrapper.cberr
 	cmd.Stdout = wrapper.cbout
+	// cmd.Stderr = os.Stderr
+	// cmd.Stdout = os.Stdout
 	wrapper.cmd = cmd
 
 	wrapper.start = time.Now()

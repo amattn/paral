@@ -26,9 +26,7 @@ You can use the `-n` flag to control the maximum number of simultaneous commands
 
     paral -n=5 "sleep 5 && echo c5" "sleep 4 && echo c4" "sleep 3 && echo c3" "sleep 2 && echo c2" "sleep 1 && echo c1"
 
-
-
-    paral -n=1 "sleep 0.5 && echo 1 && sleep 0.5 && echo 1 && sleep 0.5 && echo 1 && sleep 0.5 && echo 1 && sleep 0.5 && echo 1 && sleep 0.5 && echo 1 && sleep 0.5 && echo 1 && sleep 0.5 && echo 1" 
+    paral -n=1 "echo a && sleep 0.5 && echo b && sleep 0.5 && echo c && sleep 0.5 && echo d && sleep 0.5 && echo e && sleep 0.5 && echo f && sleep 0.5 && echo g && sleep 0.5 && echo h" 
 
 Notes
 -----
