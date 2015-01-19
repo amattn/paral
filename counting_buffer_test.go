@@ -77,3 +77,25 @@ func TestReadFromStdOut(t *testing.T) {
 	assert.Equal(t, uint64(0), cberr.TotalIn())
 	assert.Equal(t, uint64(6), cbout.TotalIn())
 }
+
+func TestLongRead(t *testing.T) {
+	long := "echo abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz && sleep 0.04 && "
+	for i := 0; i < 4; i++ {
+		long = long + long
+	}
+	long = long + "echo done"
+	cmd := exec.Command("sh", "-c", long)
+	cberr := NewCountingBuffer()
+	cbout := NewCountingBuffer()
+	cmd.Stderr = cberr
+	cmd.Stdout = cbout
+
+	err := cmd.Run()
+	assert.Equal(t, nil, err, 948027283)
+	if err != nil {
+		log.Println(err)
+	}
+
+	assert.Equal(t, uint64(0), cberr.TotalIn())
+	assert.Equal(t, uint64(3349), cbout.TotalIn())
+}

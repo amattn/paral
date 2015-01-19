@@ -69,7 +69,7 @@ func (cb *CountingBuffer) ReadFrom(r io.Reader) (n int64, err error) {
 	// we can't use cb.Buffer.ReadFrom(r).  That implemenation blocks until EOF.
 	// instead we reimplement a simplified version of ReadFrom() here.
 
-	buffer_space := 80 // assume that most lines don't exceed 80 chars...
+	buffer_space := 100 // we assume that most lines don't exceed 80 chars and add some padding.
 	buf := make([]byte, buffer_space)
 
 	for {
@@ -91,6 +91,12 @@ func (cb *CountingBuffer) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 		if err != nil {
 			return n, err
+		}
+
+		// if m is largish, grow our buffer
+		if m > int(0.7*float64(buffer_space)) {
+			buffer_space *= 2
+			buf = make([]byte, buffer_space)
 		}
 	}
 	return n, nil
