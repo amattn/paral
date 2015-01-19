@@ -7,6 +7,14 @@ Launch commands, shell scripts in parallel.  Designed as an alternative/replacem
 Installation
 ------------
 
+The usual:
+
+    go get github.com/amattn/paral
+
+
+If the go tool chain is installed, this should just appear in your `GOPATH`.
+
+Eventually, I'll package releases for download at https://github.com/amattn/paral/releases
 
 Usage
 -----
@@ -17,6 +25,8 @@ Usage
 
 
 You can use the `-n` flag to control the maximum number of simultaneous commands.  If you set this value to 0, then all commands are completed simultaneously.  The default value is equal to the number of CPU cores detected by the program.  
+
+Here are some examples:
 
     paral -n=0 "sleep 5 && echo c5" "sleep 4 && echo c4" "sleep 3 && echo c3" "sleep 2 && echo c2" "sleep 1 && echo c1"
 
