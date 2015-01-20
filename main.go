@@ -61,12 +61,9 @@ func main() {
 	args := flag.Args()
 	cmds := make([]*commandWrapper, 0, len(args))
 	for i, a := range flag.Args() {
-		cmd := commandWrapper{
-			raw: a,
-			num: i,
-		}
+		cmd := newWrapper(a, i)
 		fmt.Printf("%3d, %v\n", i, cmd.raw)
-		cmds = append(cmds, &cmd)
+		cmds = append(cmds, cmd)
 	}
 
 	// Scheduler

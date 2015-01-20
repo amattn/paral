@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 )
 
 // http://stackoverflow.com/questions/17006262/clearing-output-of-a-terminal-program-in-linux-c
@@ -21,26 +22,31 @@ type ErasableOutputter struct {
 
 	numberOfProgressLinesWritten int
 	lastOutputWidth              int
+	mutex                        *sync.Mutex
 }
 
 func NewErasableOutputter(writer io.Writer) *ErasableOutputter {
 	eo := new(ErasableOutputter)
 	eo.writer = writer
-
+	eo.mutex = new(sync.Mutex)
 	return eo
 }
 
 //
 func (eo *ErasableOutputter) OutputUnerasableString(str string) {
+	eo.mutex.Lock()
+	defer eo.mutex.Unlock()
 	fmt.Fprintf(eo.writer, str)
 	eo.numberOfProgressLinesWritten = 0
 }
 
 func (eo *ErasableOutputter) OutputErasableString(str string) {
+	eo.mutex.Lock()
+	defer eo.mutex.Unlock()
 	if strings.HasSuffix(str, "\n") == false {
 		str = str + "\n"
 	}
-	eo.EraseLastEraseble()
+	eo.eraseLastErasebleNoLock()
 	fmt.Fprintf(eo.writer, str)
 	lines := strings.Split(str, "\n")
 	eo.numberOfProgressLinesWritten = len(lines) - 1
@@ -57,6 +63,13 @@ func (eo *ErasableOutputter) OutputErasableString(str string) {
 // If the last output was NOT erasable, then this method does nothing.
 // This returns the number of lines erased.
 func (eo *ErasableOutputter) EraseLastEraseble() int {
+	eo.mutex.Lock()
+	defer eo.mutex.Unlock()
+	return eo.eraseLastErasebleNoLock()
+
+}
+
+func (eo *ErasableOutputter) eraseLastErasebleNoLock() int {
 	erased := 0
 	if eo.numberOfProgressLinesWritten > 0 {
 		for i := 0; i < eo.numberOfProgressLinesWritten; i++ {

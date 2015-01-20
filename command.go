@@ -24,6 +24,14 @@ type commandWrapper struct {
 	end   time.Time
 }
 
+func newWrapper(raw string, num int) *commandWrapper {
+	wrapper := new(commandWrapper)
+	wrapper.raw = raw
+	wrapper.num = num
+	wrapper.cberr = NewCountingBuffer()
+	wrapper.cbout = NewCountingBuffer()
+	return wrapper
+}
 func (wrapper commandWrapper) outputFileName() string {
 	return fmt.Sprintf("%v_%d.out", output_file_prefix, wrapper.num)
 }
@@ -42,8 +50,6 @@ func (wrapper *commandWrapper) run() (err error) {
 	// fmt.Println(wrapper.num, "running:", wrapper.raw)
 
 	cmd := exec.Command("sh", "-c", wrapper.raw)
-	wrapper.cberr = NewCountingBuffer()
-	wrapper.cbout = NewCountingBuffer()
 	cmd.Stderr = wrapper.cberr
 	cmd.Stdout = wrapper.cbout
 	// cmd.Stderr = os.Stderr
