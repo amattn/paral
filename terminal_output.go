@@ -10,7 +10,7 @@ import (
 // http://stackoverflow.com/questions/17006262/clearing-output-of-a-terminal-program-in-linux-c
 // We currently use "\033[%dA" to move up a line
 // We currently use "\r" to move to the beginning of a line
-// This isn't really portable...
+// This isn't really portable...eventually, we should use ncurses or something.
 
 const (
 	up1line_metacharacter = "\033[1A"

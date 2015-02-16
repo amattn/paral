@@ -81,7 +81,6 @@ func (s *Scheduler) start() {
 
 			go func(wrapper *commandWrapper) {
 				wrapper.run()
-
 				s.finished = append(s.finished, wrapper)
 				exit := "exit status 0"
 				if wrapper.pstate != nil {

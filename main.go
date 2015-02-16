@@ -19,13 +19,19 @@ var show_h bool
 var show_help bool
 var show_version bool
 var output_file_prefix string
+var output_file_suffix string
+var error_file_prefix string
+var error_file_suffix string
 var max_simul int
 
 func init() {
 	flag.BoolVar(&show_h, "h", false, "show help message and exit(0)")
 	flag.BoolVar(&show_help, "help", false, "show help message and exit(0)")
 	flag.BoolVar(&show_version, "version", false, "show version info and exit(0)")
-	flag.StringVar(&output_file_prefix, "out", "out", "prefix name of output file which contains stdout and stderr of processes")
+	flag.StringVar(&output_file_prefix, "output-prefix", "out_", "prefix prepended to name of output file which contains stdout of processes")
+	flag.StringVar(&output_file_suffix, "output-suffix", ".out.log", "suffix appended to name of output file which contains stdout of processes")
+	flag.StringVar(&error_file_prefix, "error-prefix", "out_", "prefix prepended to name of output file which contains stderr of processes")
+	flag.StringVar(&error_file_suffix, "error-suffix", ".err.log", "suffix appended to name of output file which contains stderr of processes")
 	flag.IntVar(&max_simul, "n", runtime.NumCPU(), "maximum number of simultaneous processes.  Defaults to NumCPU().  To run all processes simultaneously, set to 0.")
 }
 
