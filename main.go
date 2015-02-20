@@ -18,6 +18,7 @@ const MinInt = -MaxInt - 1
 var show_h bool
 var show_help bool
 var show_version bool
+var capture_output_to_file bool
 var output_file_prefix string
 var output_file_suffix string
 var error_file_prefix string
@@ -28,6 +29,7 @@ func init() {
 	flag.BoolVar(&show_h, "h", false, "show help message and exit(0)")
 	flag.BoolVar(&show_help, "help", false, "show help message and exit(0)")
 	flag.BoolVar(&show_version, "version", false, "show version info and exit(0)")
+	flag.BoolVar(&capture_output_to_file, "capture-output", true, "capture stdout && stderr to file")
 	flag.StringVar(&output_file_prefix, "output-prefix", "out_", "prefix prepended to name of output file which contains stdout of processes")
 	flag.StringVar(&output_file_suffix, "output-suffix", ".out.log", "suffix appended to name of output file which contains stdout of processes")
 	flag.StringVar(&error_file_prefix, "error-prefix", "out_", "prefix prepended to name of output file which contains stderr of processes")

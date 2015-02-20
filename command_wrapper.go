@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 )
@@ -69,22 +70,37 @@ func (wrapper *commandWrapper) run() (err error) {
 	// cmd.Stderr = os.Stderr
 	// cmd.Stdout = os.Stdout
 
-	handleOutput := func(filename string, writer io.WriterTo) {
+	var wg sync.WaitGroup
+
+	handleOutput := func(filename string, writer io.WriterTo, stopChan chan bool) {
+		defer wg.Done()
 		fo, err := os.Create(filename)
 		if err == nil {
 			defer fo.Close()
 			for {
-				_, err := writer.WriteTo(fo)
-				if err != nil {
-					break
+				select {
+				case <-stopChan:
+					// one last write to clear out anything in the buffer.
+					writer.WriteTo(fo)
+					return
+				default:
+					_, err := writer.WriteTo(fo)
+					if err != nil {
+						return
+					}
 				}
 				time.Sleep(3 * time.Millisecond)
 			}
 		}
 	}
 
-	go handleOutput(wrapper.outputFileName(), wrapper.cbout)
-	go handleOutput(wrapper.errorFileName(), wrapper.cberr)
+	outStopCh := make(chan bool)
+	errStopCh := make(chan bool)
+	if capture_output_to_file {
+		wg.Add(2)
+		go handleOutput(wrapper.outputFileName(), wrapper.cbout, outStopCh)
+		go handleOutput(wrapper.errorFileName(), wrapper.cberr, errStopCh)
+	}
 	// fe, err := os.Create(wrapper.errorFileName())
 	// if err == nil {
 	// 	defer fe.Close()
@@ -101,7 +117,7 @@ func (wrapper *commandWrapper) run() (err error) {
 	}
 	err = cmd.Wait()
 	if err != nil {
-		// log.Println("run failure", err)
+		log.Println("run failure", err)
 		exiterr, isExitErr := err.(*exec.ExitError)
 		if isExitErr {
 			wrapper.pstate = exiterr.ProcessState
@@ -110,6 +126,10 @@ func (wrapper *commandWrapper) run() (err error) {
 	wrapper.end = time.Now()
 
 	// fmt.Sprintln(wrapper.num, "total time elapsed:", wrapper.end.Sub(wrapper.start))
+
+	outStopCh <- true
+	errStopCh <- true
+	wg.Wait()
 	return
 }
 

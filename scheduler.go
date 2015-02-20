@@ -104,6 +104,7 @@ func (s *Scheduler) Wait() {
 }
 
 func (s *Scheduler) Progress() string {
+	// return ""
 
 	w := new(tabwriter.Writer)
 	buf := new(bytes.Buffer)
