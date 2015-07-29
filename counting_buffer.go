@@ -11,42 +11,57 @@ import (
 
 // Counts the total number of bytes written since creation or the most recent ClearCount()
 // Reset() and Truncate() methods do NOT affect the running counts.
+// Currently UnreadByte and UnreadRune do not affect counts, but probably should.
 type CountingBuffer struct {
-	totalIn  uint64
-	totalOut uint64 // not yet implemented
+	totalIn  uint64 // do use directly, use accessor methods
+	totalOut uint64 // do use directly, use accessor methods, not yet implemented
 
 	bytes.Buffer
 
-	inmutex  *sync.Mutex
-	outmutex *sync.Mutex
+	inmutex  *sync.RWMutex
+	outmutex *sync.RWMutex
 }
 
 func NewCountingBuffer() *CountingBuffer {
 	cb := new(CountingBuffer)
-	cb.inmutex = new(sync.Mutex)
-	cb.outmutex = new(sync.Mutex)
+	cb.inmutex = new(sync.RWMutex)
+	cb.outmutex = new(sync.RWMutex)
 	return cb
 }
 
 func (cb *CountingBuffer) totalInSafeInc(delta uint64) {
-	// log.Println("totalInSafeInctotalInSafeInctotalInSafeInctotalInSafeInctotalInSafeInctotalInSafeInctotalInSafeInc")
 	cb.inmutex.Lock()
 	defer cb.inmutex.Unlock()
 	cb.totalIn += delta
 }
 
+func (cb *CountingBuffer) totalOutSafeInc(delta uint64) {
+	cb.outmutex.Lock()
+	defer cb.outmutex.Unlock()
+	cb.totalOut += delta
+}
+
 // Returns the total number of bytes written to the buffer since creation or the most recent ClearCount()
 func (cb CountingBuffer) TotalIn() uint64 {
+	cb.inmutex.RLock()
+	defer cb.inmutex.RUnlock()
 	return cb.totalIn
 }
 
 // Returns the total number of bytes read from the buffer since creation or the most recent ClearCount()
+// Not yet implemented, will always return 0
 func (cb CountingBuffer) TotalOut() uint64 {
+	cb.outmutex.RLock()
+	defer cb.outmutex.RUnlock()
 	return cb.totalOut
 }
 
 // Clear byte counter.
 func (cb *CountingBuffer) ClearCount() {
+	cb.inmutex.Lock()
+	defer cb.inmutex.Unlock()
+	cb.outmutex.Lock()
+	defer cb.outmutex.Unlock()
 	cb.totalIn = 0
 	cb.totalOut = 0
 }
@@ -66,7 +81,7 @@ func (cb *CountingBuffer) WriteString(s string) (n int, err error) {
 // don't be fooled by the name, this writes to the buffer!
 func (cb *CountingBuffer) ReadFrom(r io.Reader) (n int64, err error) {
 
-	// we can't use cb.Buffer.ReadFrom(r).  That implemenation blocks until EOF.
+	// we can't use cb.Buffer.ReadFrom(r).  That implementation blocks until EOF.
 	// instead we reimplement a simplified version of ReadFrom() here.
 
 	buffer_space := 100 // we assume that most lines don't exceed 80 chars and add some padding.
